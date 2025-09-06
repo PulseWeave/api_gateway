@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PulseWeave 高级演示界面</title>
+  <style>
+    :root { 
+      color-scheme: light dark; 
+      --primary-color: #2563eb;
+      --success-color: #16a34a;
+      --warning-color: #d97706;
+      --danger-color: #dc2626;
+      --bg-card: rgba(255,255,255,0.9);
+      --bg-dark: #0b1021;
+      --text-light: #e2e8f0;
+      --border-color: rgba(0,0,0,0.15);
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      color: white;
+    }
+    
+    .header h1 { 
+      font-size: 28px; 
+      margin: 0 0 10px; 
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+      margin: 0;
+    }
+    
+    .tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 15px 20px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+      background: var(--primary-color);
+      color: white;
+      border-bottom-color: var(--primary-color);
+    }
+    
+    .tab:hover:not(.active) {
+      background: rgba(37, 99, 235, 0.1);
+    }
+    
+    .tab-content {
+      background: var(--bg-card);
+      border-radius: 0 0 12px 12px;
+      padding: 25px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      min-height: 600px;
+    }
+    
+    .tab-pane {
+      display: none;
+    }
+    
+    .tab-pane.active {
+      display: block;
+    }
+    
+    .card { 
+      background: rgba(0,0,0,0.04); 
+      padding: 20px; 
+      border-radius: 10px; 
+      margin-bottom: 20px; 
+      border: 1px solid var(--border-color);
+    }
+    
+    .card h3 {
+      margin: 0 0 15px;
+      font-size: 18px;
+      color: var(--primary-color);
+    }
+    
+    label { 
+      font-weight: 600; 
+      display: block; 
+      margin-bottom: 8px; 
+      color: #374151;
+    }
+    
+    input[type="text"], input[type="file"], textarea, select { 
+      width: 100%; 
+      box-sizing: border-box; 
+      padding: 12px 15px; 
+      border-radius: 8px; 
+      border: 2px solid var(--border-color); 
+      background: rgba(255,255,255,0.9);
+      transition: border-color 0.3s ease;
+      font-size: 14px;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    textarea { 
+      min-height: 120px; 
+      resize: vertical; 
+      font-family: inherit;
+    }
+    
+    .btn { 
+      padding: 12px 20px; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed; 
+    }
+    
+    .btn-primary { 
+      background: var(--primary-color); 
+      color: white; 
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-success { 
+      background: var(--success-color); 
+      color: white; 
+    }
+    
+    .btn-warning { 
+      background: var(--warning-color); 
+      color: white; 
+    }
+    
+    .btn-secondary { 
+      background: #64748b; 
+      color: white; 
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    
+    .result { 
+      white-space: pre-wrap; 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+      background: var(--bg-dark); 
+      color: var(--text-light); 
+      padding: 15px; 
+      border-radius: 8px; 
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+    
+    .grid-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+    
+    .grid-3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status-healthy { background: var(--success-color); }
+    .status-warning { background: var(--warning-color); }
+    .status-error { background: var(--danger-color); }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-color);
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+    
+    .metric-card {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+      color: white;
+      border-radius: 10px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .batch-item {
+      background: rgba(255,255,255,0.5);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--primary-color);
+    }
+    
+    .batch-item.success {
+      border-left-color: var(--success-color);
+    }
+    
+    .batch-item.error {
+      border-left-color: var(--danger-color);
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .hidden { display: none !important; }
+    
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .tabs { flex-direction: column; }
+      .btn-group { flex-direction: column; }
+      .container { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌊 PulseWeave 高级演示界面</h1>
+      <p>智能推理服务 · 云端与本地融合 · 实时分析与批量处理</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="single">单文本推理</button>
+      <button class="tab" data-tab="settings">设置</button>
+    </div>
+
+    <div class="tab-content">
+      <!-- 单文本推理 -->
+      <div class="tab-pane active" id="single">
+        <div class="grid grid-2">
+          <div>
+            <div class="card">
+              <h3>📝 输入文本</h3>
+              <label>请输入要分析的文本</label>
+              <textarea id="singleText" placeholder="例如：明早七点去机场，记得身份证和充电宝"></textarea>
+              
+              <label>推理模式</label>
+              <select id="inferenceMode">
+                <option value="auto">自动选择</option>
+                <option value="cloud">云端推理</option>
+                <option value="external">外部提供商</option>
+              </select>
+              
+              <div class="btn-group">
+                <button class="btn btn-primary" id="btnSingleInfer">
+                  <span class="loading hidden"></span>
+                  开始推理
+                </button>
+                <button class="btn btn-secondary" id="btnSingleClear">清空</button>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="card">
+              <h3>📊 推理结果</h3>
+              <div class="grid grid-3" id="singleMetrics">
+                <div class="metric-card">
+                  <div class="metric-value" id="taskType">-</div>
+                  <div class="metric-label">任务类型</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-value" id="confidence">-</div>
+                  <div class="metric-label">置信度</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-value" id="latency">-</div>
+                  <div class="metric-label">耗时(ms)</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <h3>💡 智能建议</h3>
+              <div id="suggestions">等待推理结果...</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>🔍 详细结果</h3>
+          <pre id="singleResult" class="result">等待推理结果...</pre>
+        </div>
+      </div>
+
+      <!-- 批量推理 -->
+      <div class="tab-pane" id="batch">
+        <div class="card">
+          <h3>📋 批量文本输入</h3>
+          <label>输入多行文本（每行一个）</label>
+          <textarea id="batchTexts" rows="8" placeholder="明天开会记得带资料&#10;周末去超市买菜&#10;下周体检预约医院"></textarea>
+          
+          <div class="grid grid-2">
+            <div>
+              <label>推理模式</label>
+              <select id="batchMode">
+                <option value="auto">自动选择</option>
+                <option value="cloud">云端推理</option>
+                <option value="external">外部提供商</option>
+              </select>
+            </div>
+            <div>
+              <label>或上传文件</label>
+              <input type="file" id="batchFile" accept=".txt,.json" />
+            </div>
+          </div>
+          
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btnBatchInfer">
+              <span class="loading hidden"></span>
+              批量推理
+            </button>
+            <button class="btn btn-secondary" id="btnBatchClear">清空</button>
+            <button class="btn btn-success" id="btnExportResults">导出结果</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>📈 批量进度</h3>
+          <div class="progress-bar">
+            <div class="progress-fill" id="batchProgress" style="width: 0%"></div>
+          </div>
+          <div id="batchStatus">准备就绪</div>
+        </div>
+        
+        <div class="card">
+          <h3>📊 批量结果</h3>
+          <div id="batchResults">等待批量推理...</div>
+        </div>
+      </div>
+
+      <!-- 系统监控 -->
+      <div class="tab-pane" id="monitor">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>🏥 系统健康状态</h3>
+            <div id="healthStatus">检查中...</div>
+            <div class="btn-group">
+              <button class="btn btn-primary" id="btnRefreshHealth">刷新状态</button>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h3>🔧 模型状态</h3>
+            <div id="modelStatus">加载中...</div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>📈 性能指标</h3>
+          <div class="grid grid-3" id="performanceMetrics">
+            <div class="metric-card">
+              <div class="metric-value" id="totalRequests">0</div>
+              <div class="metric-label">总请求数</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="avgLatency">0ms</div>
+              <div class="metric-label">平均延迟</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="successRate">100%</div>
+              <div class="metric-label">成功率</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 设置 -->
+      <div class="tab-pane" id="settings">
+        <div class="card">
+          <h3>⚙️ 接口设置</h3>
+          <label>API Base URL</label>
+          <input type="text" id="apiBaseUrl" value="" placeholder="http://localhost:8000" />
+          
+          <label>认证Token（如需要）</label>
+          <input type="text" id="authToken" placeholder="Bearer your-token-here" />
+          
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btnSaveSettings">保存设置</button>
+            <button class="btn btn-secondary" id="btnResetSettings">重置</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>🎨 界面设置</h3>
+          <label>主题模式</label>
+          <select id="themeMode">
+            <option value="auto">跟随系统</option>
+            <option value="light">浅色模式</option>
+            <option value="dark">深色模式</option>
+          </select>
+          
+          <label>
+            <input type="checkbox" id="autoRefresh" /> 自动刷新监控数据
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全局状态
+    const state = {
+      apiBaseUrl: window.location.origin,
+      authToken: '',
+      stats: {
+        totalRequests: 0,
+        totalLatency: 0,
+        successCount: 0
+      }
+    };
+
+    // DOM 元素
+    const elements = {
+      // 标签页
+      tabs: document.querySelectorAll('.tab'),
+      tabPanes: document.querySelectorAll('.tab-pane'),
+      
+      // 单文本推理
+      singleText: document.getElementById('singleText'),
+      inferenceMode: document.getElementById('inferenceMode'),
+      btnSingleInfer: document.getElementById('btnSingleInfer'),
+      btnSingleClear: document.getElementById('btnSingleClear'),
+      singleResult: document.getElementById('singleResult'),
+      taskType: document.getElementById('taskType'),
+      confidence: document.getElementById('confidence'),
+      latency: document.getElementById('latency'),
+      suggestions: document.getElementById('suggestions'),
+      
+      // 批量推理
+      batchTexts: document.getElementById('batchTexts'),
+      batchMode: document.getElementById('batchMode'),
+      batchFile: document.getElementById('batchFile'),
+      btnBatchInfer: document.getElementById('btnBatchInfer'),
+      btnBatchClear: document.getElementById('btnBatchClear'),
+      btnExportResults: document.getElementById('btnExportResults'),
+      batchProgress: document.getElementById('batchProgress'),
+      batchStatus: document.getElementById('batchStatus'),
+      batchResults: document.getElementById('batchResults'),
+      
+      // 监控
+      healthStatus: document.getElementById('healthStatus'),
+      modelStatus: document.getElementById('modelStatus'),
+      btnRefreshHealth: document.getElementById('btnRefreshHealth'),
+      totalRequests: document.getElementById('totalRequests'),
+      avgLatency: document.getElementById('avgLatency'),
+      successRate: document.getElementById('successRate'),
+      
+      // 设置
+      apiBaseUrl: document.getElementById('apiBaseUrl'),
+      authToken: document.getElementById('authToken'),
+      btnSaveSettings: document.getElementById('btnSaveSettings'),
+      btnResetSettings: document.getElementById('btnResetSettings'),
+      themeMode: document.getElementById('themeMode'),
+      autoRefresh: document.getElementById('autoRefresh')
+    };
+
+    // 工具函数
+    function showLoading(button, show = true) {
+      const loading = button.querySelector('.loading');
+      if (loading) {
+        loading.classList.toggle('hidden', !show);
+      }
+      button.disabled = show;
+    }
+
+    function updateStats(latency, success = true) {
+      state.stats.totalRequests++;
+      state.stats.totalLatency += latency;
+      if (success) state.stats.successCount++;
+
+      elements.totalRequests.textContent = state.stats.totalRequests;
+      elements.avgLatency.textContent = Math.round(state.stats.totalLatency / state.stats.totalRequests) + 'ms';
+      elements.successRate.textContent = Math.round((state.stats.successCount / state.stats.totalRequests) * 100) + '%';
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+      const url = `${state.apiBaseUrl}${endpoint}`;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+      };
+
+      if (state.authToken) {
+        headers['Authorization'] = state.authToken;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`HTTP ${response.status}: ${error}`);
+      }
+
+      return response.json();
+    }
+
+    // 标签页切换
+    elements.tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+
+        // 更新标签页状态
+        elements.tabs.forEach(t => t.classList.remove('active'));
+        elements.tabPanes.forEach(p => p.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById(targetTab).classList.add('active');
+      });
+    });
+
+    // 单文本推理
+    elements.btnSingleInfer.addEventListener('click', async () => {
+      const text = elements.singleText.value.trim();
+      if (!text) {
+        alert('请输入要分析的文本');
+        return;
+      }
+
+      showLoading(elements.btnSingleInfer, true);
+      elements.singleResult.textContent = '推理中...';
+      elements.taskType.textContent = '-';
+      elements.confidence.textContent = '-';
+      elements.latency.textContent = '-';
+      elements.suggestions.textContent = '推理中...';
+
+      try {
+        const mode = elements.inferenceMode.value;
+        let endpoint = '/infer';
+        if (mode === 'cloud') endpoint = '/infer/cloud';
+
+        const result = await apiRequest(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({ text })
+        });
+
+        // 更新结果显示
+        elements.singleResult.textContent = JSON.stringify(result, null, 2);
+        elements.taskType.textContent = result.task_type || '-';
+        elements.confidence.textContent = result.confidence ? (result.confidence * 100).toFixed(1) + '%' : '-';
+        elements.latency.textContent = result.latency_ms || '-';
+
+        // 更新建议
+        const suggestions = [];
+        if (result.summary_text) suggestions.push(`📝 ${result.summary_text}`);
+        if (result.suggested_plan) suggestions.push(`💡 ${result.suggested_plan}`);
+        if (result.potential_omissions && result.potential_omissions.length > 0) {
+          suggestions.push(`⚠️ 可能遗漏：${result.potential_omissions.join('、')}`);
+        }
+        elements.suggestions.innerHTML = suggestions.join('<br><br>') || '暂无建议';
+
+        updateStats(result.latency_ms || 0, true);
+
+      } catch (error) {
+        elements.singleResult.textContent = `推理失败: ${error.message}`;
+        elements.suggestions.textContent = '推理失败，请检查输入或网络连接';
+        updateStats(0, false);
+      } finally {
+        showLoading(elements.btnSingleInfer, false);
+      }
+    });
+
+    elements.btnSingleClear.addEventListener('click', () => {
+      elements.singleText.value = '';
+      elements.singleResult.textContent = '等待推理结果...';
+      elements.taskType.textContent = '-';
+      elements.confidence.textContent = '-';
+      elements.latency.textContent = '-';
+      elements.suggestions.textContent = '等待推理结果...';
+    });
+
+    // 批量推理
+    elements.batchFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        if (file.name.endsWith('.json')) {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            elements.batchTexts.value = data.join('\n');
+          } else if (data.texts && Array.isArray(data.texts)) {
+            elements.batchTexts.value = data.texts.join('\n');
+          }
+        } else {
+          elements.batchTexts.value = text;
+        }
+      } catch (error) {
+        alert(`文件读取失败: ${error.message}`);
+      }
+    });
+
+    elements.btnBatchInfer.addEventListener('click', async () => {
+      const textsInput = elements.batchTexts.value.trim();
+      if (!textsInput) {
+        alert('请输入要批量分析的文本');
+        return;
+      }
+
+      const texts = textsInput.split('\n').filter(t => t.trim()).map(t => t.trim());
+      if (texts.length === 0) {
+        alert('没有有效的文本行');
+        return;
+      }
+
+      if (texts.length > 100) {
+        alert('批量推理最多支持100个文本');
+        return;
+      }
+
+      showLoading(elements.btnBatchInfer, true);
+      elements.batchProgress.style.width = '0%';
+      elements.batchStatus.textContent = `准备处理 ${texts.length} 个文本...`;
+      elements.batchResults.innerHTML = '';
+
+      try {
+        const mode = elements.batchMode.value;
+        const useCloud = mode === 'cloud' ? true : mode === 'external' ? false : null;
+
+        const result = await apiRequest('/infer/batch', {
+          method: 'POST',
+          body: JSON.stringify({
+            texts,
+            use_cloud_inference: useCloud
+          })
+        });
+
+        // 更新进度
+        elements.batchProgress.style.width = '100%';
+        elements.batchStatus.textContent = `完成！成功 ${result.success_count}/${result.total_count}，总耗时 ${result.total_latency_ms}ms`;
+
+        // 显示结果
+        const resultsHtml = result.results.map((r, i) => {
+          const isSuccess = r.confidence > 0.1 && r.task_type !== 'other';
+          return `
+            <div class="batch-item ${isSuccess ? 'success' : 'error'}">
+              <strong>文本 ${i + 1}:</strong> ${texts[i]}<br>
+              <strong>任务类型:</strong> ${r.task_type}
+              <strong>置信度:</strong> ${(r.confidence * 100).toFixed(1)}%
+              <strong>耗时:</strong> ${r.latency_ms}ms<br>
+              <strong>摘要:</strong> ${r.summary_text}<br>
+              <strong>建议:</strong> ${r.suggested_plan}
+              ${r.potential_omissions && r.potential_omissions.length > 0 ?
+                `<br><strong>可能遗漏:</strong> ${r.potential_omissions.join('、')}` : ''}
+            </div>
+          `;
+        }).join('');
+
+        elements.batchResults.innerHTML = resultsHtml;
+
+        // 保存结果用于导出
+        window.lastBatchResults = { texts, results: result.results };
+
+        updateStats(result.total_latency_ms / result.total_count, result.success_count > 0);
+
+      } catch (error) {
+        elements.batchStatus.textContent = `批量推理失败: ${error.message}`;
+        elements.batchResults.innerHTML = `<div class="batch-item error">错误: ${error.message}</div>`;
+        updateStats(0, false);
+      } finally {
+        showLoading(elements.btnBatchInfer, false);
+      }
+    });
+
+    elements.btnBatchClear.addEventListener('click', () => {
+      elements.batchTexts.value = '';
+      elements.batchFile.value = '';
+      elements.batchProgress.style.width = '0%';
+      elements.batchStatus.textContent = '准备就绪';
+      elements.batchResults.innerHTML = '等待批量推理...';
+    });
+
+    elements.btnExportResults.addEventListener('click', () => {
+      if (!window.lastBatchResults) {
+        alert('没有可导出的结果');
+        return;
+      }
+
+      const data = {
+        timestamp: new Date().toISOString(),
+        total_count: window.lastBatchResults.results.length,
+        results: window.lastBatchResults.texts.map((text, i) => ({
+          input_text: text,
+          ...window.lastBatchResults.results[i]
+        }))
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pulseweave_batch_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // 系统监控
+    async function refreshHealth() {
+      showLoading(elements.btnRefreshHealth, true);
+
+      try {
+        const health = await apiRequest('/model/health');
+
+        let statusHtml = '';
+        const overallStatus = health.overall_status;
+        const statusClass = overallStatus === 'healthy' ? 'status-healthy' :
+                           overallStatus === 'degraded' ? 'status-warning' : 'status-error';
+
+        statusHtml += `<div><span class="status-indicator ${statusClass}"></span><strong>总体状态:</strong> ${overallStatus}</div><br>`;
+
+        if (health.cloud_inference) {
+          const cloudStatus = health.cloud_inference.status === 'healthy' ? 'status-healthy' : 'status-error';
+          statusHtml += `<div><span class="status-indicator ${cloudStatus}"></span><strong>云端推理:</strong> ${health.cloud_inference.status}</div>`;
+          if (health.cloud_inference.latency_ms) {
+            statusHtml += ` (${health.cloud_inference.latency_ms}ms)`;
+          }
+          statusHtml += '<br>';
+        }
+
+        if (health.external_provider) {
+          const providerStatus = health.external_provider.status === 'healthy' ? 'status-healthy' : 'status-error';
+          statusHtml += `<div><span class="status-indicator ${providerStatus}"></span><strong>外部提供商:</strong> ${health.external_provider.status}</div>`;
+          if (health.external_provider.latency_ms) {
+            statusHtml += ` (${health.external_provider.latency_ms}ms)`;
+          }
+        }
+
+        elements.healthStatus.innerHTML = statusHtml;
+
+      } catch (error) {
+        elements.healthStatus.innerHTML = `<div><span class="status-indicator status-error"></span>健康检查失败: ${error.message}</div>`;
+      } finally {
+        showLoading(elements.btnRefreshHealth, false);
+      }
+    }
+
+    async function refreshModelStatus() {
+      try {
+        const status = await apiRequest('/model/status');
+
+        let statusHtml = '';
+
+        if (status.cloud_inference) {
+          statusHtml += '<h4>🌥️ 云端推理</h4>';
+          statusHtml += `<p><strong>初始化状态:</strong> ${status.cloud_inference.initialized ? '✅ 已初始化' : '❌ 未初始化'}</p>`;
+          statusHtml += `<p><strong>设备:</strong> ${status.cloud_inference.device || 'unknown'}</p>`;
+          statusHtml += `<p><strong>已加载模型:</strong> ${status.cloud_inference.loaded_models ? status.cloud_inference.loaded_models.join(', ') : '无'}</p>`;
+          statusHtml += `<p><strong>支持任务类型:</strong> ${status.cloud_inference.available_task_types ? status.cloud_inference.available_task_types.join(', ') : '无'}</p>`;
+        }
+
+        if (status.external_provider) {
+          statusHtml += '<h4>🔗 外部提供商</h4>';
+          statusHtml += `<p><strong>提供商:</strong> ${status.external_provider.name}</p>`;
+          statusHtml += `<p><strong>模型:</strong> ${status.external_provider.model}</p>`;
+          statusHtml += `<p><strong>状态:</strong> ${status.external_provider.available ? '✅ 可用' : '❌ 不可用'}</p>`;
+        }
+
+        if (status.service_config) {
+          statusHtml += '<h4>⚙️ 服务配置</h4>';
+          statusHtml += `<p><strong>需要认证:</strong> ${status.service_config.require_auth ? '是' : '否'}</p>`;
+          statusHtml += `<p><strong>返回向量:</strong> ${status.service_config.return_vector ? '是' : '否'}</p>`;
+        }
+
+        elements.modelStatus.innerHTML = statusHtml;
+
+      } catch (error) {
+        elements.modelStatus.innerHTML = `模型状态获取失败: ${error.message}`;
+      }
+    }
+
+    elements.btnRefreshHealth.addEventListener('click', () => {
+      refreshHealth();
+      refreshModelStatus();
+    });
+
+    // 设置功能
+    function loadSettings() {
+      const savedSettings = localStorage.getItem('pulseweave_settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        state.apiBaseUrl = settings.apiBaseUrl || window.location.origin;
+        state.authToken = settings.authToken || '';
+
+        elements.apiBaseUrl.value = state.apiBaseUrl;
+        elements.authToken.value = state.authToken;
+        elements.themeMode.value = settings.themeMode || 'auto';
+        elements.autoRefresh.checked = settings.autoRefresh || false;
+      } else {
+        elements.apiBaseUrl.value = window.location.origin;
+      }
+    }
+
+    function saveSettings() {
+      const settings = {
+        apiBaseUrl: elements.apiBaseUrl.value.trim() || window.location.origin,
+        authToken: elements.authToken.value.trim(),
+        themeMode: elements.themeMode.value,
+        autoRefresh: elements.autoRefresh.checked
+      };
+
+      state.apiBaseUrl = settings.apiBaseUrl;
+      state.authToken = settings.authToken;
+
+      localStorage.setItem('pulseweave_settings', JSON.stringify(settings));
+      alert('设置已保存');
+    }
+
+    elements.btnSaveSettings.addEventListener('click', saveSettings);
+
+    elements.btnResetSettings.addEventListener('click', () => {
+      if (confirm('确定要重置所有设置吗？')) {
+        localStorage.removeItem('pulseweave_settings');
+        elements.apiBaseUrl.value = window.location.origin;
+        elements.authToken.value = '';
+        elements.themeMode.value = 'auto';
+        elements.autoRefresh.checked = false;
+
+        state.apiBaseUrl = window.location.origin;
+        state.authToken = '';
+
+        alert('设置已重置');
+      }
+    });
+
+    // 自动刷新
+    let autoRefreshInterval;
+
+    elements.autoRefresh.addEventListener('change', () => {
+      if (elements.autoRefresh.checked) {
+        autoRefreshInterval = setInterval(() => {
+          if (document.getElementById('monitor').classList.contains('active')) {
+            refreshHealth();
+            refreshModelStatus();
+          }
+        }, 30000); // 30秒刷新一次
+      } else {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+        }
+      }
+    });
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+
+      // 初始加载监控数据
+      setTimeout(() => {
+        refreshHealth();
+        refreshModelStatus();
+      }, 1000);
+
+      // 添加一些示例文本
+      const examples = [
+        "明早七点去机场，记得身份证和充电宝",
+        "下周三下午两点开项目评审会",
+        "周末去超市买菜，需要买米、油、蔬菜",
+        "明天体检，早上不能吃东西",
+        "晚上和朋友聚餐，订个包间"
+      ];
+
+      // 随机选择一个示例
+      const randomExample = examples[Math.floor(Math.random() * examples.length)];
+      elements.singleText.placeholder = randomExample;
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'Enter':
+            e.preventDefault();
+            if (document.getElementById('single').classList.contains('active')) {
+              elements.btnSingleInfer.click();
+            } else if (document.getElementById('batch').classList.contains('active')) {
+              elements.btnBatchInfer.click();
+            }
+            break;
+          case '1':
+            e.preventDefault();
+            elements.tabs[0].click();
+            break;
+          case '2':
+            e.preventDefault();
+            elements.tabs[1].click();
+            break;
+          case '3':
+            e.preventDefault();
+            elements.tabs[2].click();
+            break;
+          case '4':
+            e.preventDefault();
+            elements.tabs[3].click();
+            break;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseWeave WebSocket 演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            background-color: white;
+        }
+        .message.sent {
+            border-left-color: #e74c3c;
+            background-color: #fdf2f2;
+        }
+        .message.received {
+            border-left-color: #27ae60;
+            background-color: #f2fdf2;
+        }
+        .message.error {
+            border-left-color: #f39c12;
+            background-color: #fef9e7;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        .task-list {
+            margin-top: 20px;
+        }
+        .task-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: white;
+        }
+        .task-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .task-status.pending { background-color: #ffeaa7; color: #2d3436; }
+        .task-status.processing { background-color: #74b9ff; color: white; }
+        .task-status.completed { background-color: #00b894; color: white; }
+        .task-status.failed { background-color: #e17055; color: white; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 PulseWeave WebSocket 演示</h1>
+        
+        <!-- 连接状态 -->
+        <div id="status" class="status disconnected">
+            未连接到服务器
+        </div>
+        
+        <!-- 连接控制 -->
+        <div class="input-group">
+            <label for="wsUrl">WebSocket地址:</label>
+            <input type="text" id="wsUrl" value="ws://localhost:8000/ws" />
+        </div>
+        
+        <button id="connectBtn" onclick="connect()">连接</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>断开连接</button>
+        <button onclick="getStats()">获取统计</button>
+        <button onclick="getMyTasks()">我的任务</button>
+        <button onclick="ping()">心跳测试</button>
+        
+        <!-- 推理任务提交 -->
+        <div class="input-group">
+            <label for="textInput">要分析的文本:</label>
+            <textarea id="textInput" placeholder="输入要分析的文本，例如：明早七点去机场，记得身份证和充电宝"></textarea>
+        </div>
+        
+        <button onclick="submitTask()">提交推理任务</button>
+        <button onclick="submitEventTask()">提交事件数据任务</button>
+        
+        <!-- 消息显示 -->
+        <div class="messages" id="messages"></div>
+        
+        <!-- 任务列表 -->
+        <div class="task-list">
+            <h3>我的任务</h3>
+            <div id="taskList"></div>
+        </div>
+        
+        <!-- 统计信息 -->
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let clientId = null;
+        let tasks = [];
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            
+            try {
+                ws = new WebSocket(url);
+                
+                ws.onopen = function(event) {
+                    updateStatus('connected', '已连接到服务器');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    addMessage('系统', '连接已建立', 'received');
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                };
+                
+                ws.onclose = function(event) {
+                    updateStatus('disconnected', '连接已断开');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    addMessage('系统', '连接已断开', 'error');
+                };
+                
+                ws.onerror = function(error) {
+                    addMessage('系统', '连接错误: ' + error, 'error');
+                };
+                
+            } catch (error) {
+                addMessage('系统', '连接失败: ' + error, 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function updateStatus(status, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message;
+        }
+        
+        function addMessage(sender, content, type = 'received') {
+            const messagesEl = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageEl.innerHTML = `
+                <div class="timestamp">${timestamp} - ${sender}</div>
+                <div>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</div>
+            `;
+            
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        
+        function sendMessage(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(message));
+                addMessage('我', message, 'sent');
+            } else {
+                addMessage('系统', '未连接到服务器', 'error');
+            }
+        }
+        
+        function handleMessage(data) {
+            addMessage('服务器', data, 'received');
+            
+            if (data.type === 'connection_established') {
+                clientId = data.client_id;
+            } else if (data.type === 'task_status_update') {
+                updateTaskStatus(data);
+            } else if (data.type === 'my_tasks') {
+                displayTasks(data.tasks);
+            } else if (data.type === 'stats') {
+                displayStats(data.data);
+            }
+        }
+        
+        function submitTask() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                addMessage('系统', '请输入要分析的文本', 'error');
+                return;
+            }
+            
+            const message = {
+                type: 'submit_task',
+                data: {
+                    text: text
+                }
+            };
+            
+            sendMessage(message);
+        }
+        
+        function submitEventTask() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                addMessage('系统', '请输入要分析的文本', 'error');
+                return;
+            }
+            
+            // 模拟事件数据
+            const eventData = {
+                event_id: `evt_${Date.now()}_001`,
+                event_type: {
+                    label: "ConversationUtterance",
+                    ontology_id: null
+                },
+                start_time: new Date().toISOString(),
+                end_time: new Date(Date.now() + 60000).toISOString(),
+                start_offset_sec: 0,
+                end_offset_sec: 60,
+                confidence: 0.9,
+                speakers: [{
+                    speaker_id: "spk_1",
+                    speaker_label: "SPK_1",
+                    is_user: true,
+                    speaker_confidence: 0.95
+                }],
+                transcript: text,
+                audio_features: {
+                    avg_volume_db: -18.2,
+                    snr_db: 20.5,
+                    speech_rate_wpm: 120.0,
+                    language: "zh-CN",
+                    asr_confidence: 0.87
+                },
+                entities: [],
+                tags: ["demo", "websocket"]
+            };
+            
+            const message = {
+                type: 'submit_task',
+                data: {
+                    event: eventData
+                }
+            };
+            
+            sendMessage(message);
+        }
+        
+        function getStats() {
+            sendMessage({ type: 'get_stats' });
+        }
+        
+        function getMyTasks() {
+            sendMessage({ type: 'get_my_tasks' });
+        }
+        
+        function ping() {
+            sendMessage({ type: 'ping' });
+        }
+        
+        function updateTaskStatus(data) {
+            // 更新任务列表中的状态
+            const taskEl = document.getElementById(`task-${data.task_id}`);
+            if (taskEl) {
+                const statusEl = taskEl.querySelector('.task-status');
+                statusEl.textContent = data.status;
+                statusEl.className = `task-status ${data.status}`;
+            }
+        }
+        
+        function displayTasks(taskList) {
+            const taskListEl = document.getElementById('taskList');
+            taskListEl.innerHTML = '';
+            
+            if (taskList.length === 0) {
+                taskListEl.innerHTML = '<p>暂无任务</p>';
+                return;
+            }
+            
+            taskList.forEach(task => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'task-item';
+                taskEl.id = `task-${task.task_id}`;
+                
+                taskEl.innerHTML = `
+                    <div>
+                        <strong>任务ID:</strong> ${task.task_id}
+                        <span class="task-status ${task.status}">${task.status}</span>
+                    </div>
+                    <div><strong>创建时间:</strong> ${new Date(task.created_at * 1000).toLocaleString()}</div>
+                    ${task.result ? `<div><strong>结果:</strong> ${task.result.task_type} (置信度: ${task.result.confidence})</div>` : ''}
+                    ${task.error ? `<div style="color: red;"><strong>错误:</strong> ${task.error}</div>` : ''}
+                `;
+                
+                taskListEl.appendChild(taskEl);
+            });
+        }
+        
+        function displayStats(stats) {
+            const statsEl = document.getElementById('stats');
+            statsEl.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.active_connections}</div>
+                    <div class="stat-label">活跃连接</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_tasks}</div>
+                    <div class="stat-label">总任务数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.active_tasks}</div>
+                    <div class="stat-label">活跃任务</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.completed_tasks}</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.failed_tasks}</div>
+                    <div class="stat-label">失败任务</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.queue_size}</div>
+                    <div class="stat-label">队列长度</div>
+                </div>
+            `;
+        }
+        
+        // 页面加载时自动连接
+        window.onload = function() {
+            // 可以选择自动连接
+            // connect();
+        };
+        
+        // 页面关闭时断开连接
+        window.onbeforeunload = function() {
+            if (ws) {
+                ws.close();
+            }
+        };
+    </script>
+</body>
+</html>

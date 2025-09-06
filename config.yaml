@@ -1,0 +1,15 @@
+provider:  
+  name: deepseek  
+  mode: http  
+  base_url: https://api.deepseek.com  
+  model: deepseek-chat  
+  api_key: sk-c08f1194f00947a2b632821230666a83
+  timeout_sec: 30
+  max_retries: 2  
+  temperature: 0.0  
+  max_tokens: 300  
+  top_p: 1.0  
+  
+service:  
+  require_auth: false  
+  return_vector: false 

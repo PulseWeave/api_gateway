@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PulseWeave 网关 · 可视化界面</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; padding: 24px; }
+    .container { max-width: 880px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 12px; }
+    .card { background: rgba(0,0,0,0.04); padding: 16px; border-radius: 10px; margin-bottom: 16px; }
+    label { font-weight: 600; display: block; margin-bottom: 6px; }
+    input[type="text"], textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.9); }
+    textarea { min-height: 120px; resize: vertical; }
+    button { padding: 10px 14px; border: none; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer; font-weight: 600; }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+    .result { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #0b1021; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow: auto; }
+    .muted { color: #666; font-size: 12px; }
+    .footer { margin-top: 24px; color: #777; font-size: 12px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .plain { background: rgba(255,255,255,0.75); color: #111; border-radius: 8px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PulseWeave API Gateway · 可视化界面</h1>
+
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+      <h3 style="margin-top: 0; color: #1976d2;">🔄 WebSocket实时推理</h3>
+      <p style="margin-bottom: 10px;">支持异步推理和实时状态通知，适合长时间推理任务</p>
+      <a href="websocket_demo.html" style="color: #1976d2; text-decoration: none; font-weight: bold;">
+        → 体验WebSocket演示界面
+      </a>
+    </div>
+
+    <div class="card">
+      <label>输入文本</label>
+      <textarea id="inputText" placeholder="例如：明早七点去机场，记得身份证和充电宝"></textarea>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button id="btnInfer">发送推理</button>
+        <button id="btnHealth" style="background:#16a34a;">健康检查</button>
+        <button id="btnClear" style="background:#64748b;">清空</button>
+      </div>
+    </div>
+
+    <div class="card cols">
+      <div>
+        <label>纯文字结果</label>
+        <div id="summary" class="plain">等待请求…</div>
+      </div>
+      <div>
+        <label>建议规划</label>
+        <div id="plan" class="plain">等待请求…</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>原始返回（调试用）</label>
+      <pre id="result" class="result">等待请求…</pre>
+      <p class="muted">用于调试查看完整JSON，正常使用以“纯文字结果/建议规划”为准。</p>
+    </div>
+
+    <div class="footer">© PulseWeave</div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function setLoading(loading) {
+      $("btnInfer").disabled = loading;
+      $("btnHealth").disabled = loading;
+    }
+
+    async function doHealth() {
+      setLoading(true);
+      $("result").textContent = "健康检查中…";
+      try {
+        const resp = await fetch("/health", { method: "GET" });
+        const data = await resp.json();
+        $("result").textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        $("result").textContent = String(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function doInfer() {
+      const text = $("inputText").value.trim();
+      if (!text) {
+        $("result").textContent = "请输入文本";
+        return;
+      }
+      setLoading(true);
+      $("result").textContent = "推理中…";
+      $("summary").textContent = "推理中…";
+      $("plan").textContent = "推理中…";
+      try {
+        // 使用DeepSeek API进行推理
+        let resp = await fetch("/infer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        if (!resp.ok) {
+          const errorText = await resp.text();
+          throw new Error(`推理失败: HTTP ${resp.status}: ${errorText}`);
+        }
+
+        const data = await resp.json();
+        $("result").textContent = JSON.stringify(data, null, 2);
+        $("summary").textContent = data.summary_text || "(无摘要)";
+        $("plan").textContent = data.suggested_plan || "(无建议)";
+
+        // 显示增强信息
+        displayEnhancedInfo(data);
+      } catch (e) {
+        $("result").textContent = String(e);
+        $("summary").textContent = "请求失败";
+        $("plan").textContent = "请求失败";
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    $("btnHealth").addEventListener("click", doHealth);
+    $("btnInfer").addEventListener("click", doInfer);
+    $("btnClear").addEventListener("click", () => { 
+      $("inputText").value = ""; 
+      $("result").textContent = "已清空"; 
+      $("summary").textContent = "等待请求…";
+      $("plan").textContent = "等待请求…";
+    });
+
+    // 显示增强信息的函数
+    function displayEnhancedInfo(data) {
+      let enhancedHtml = "";
+
+      // 显示提取的实体
+      if (data.extracted_entities && data.extracted_entities.length > 0) {
+        enhancedHtml += "<h4>🏷️ 提取的实体:</h4><ul>";
+        data.extracted_entities.forEach(entity => {
+          enhancedHtml += `<li>${entity.type}: ${entity.value} (${(entity.confidence * 100).toFixed(1)}%)</li>`;
+        });
+        enhancedHtml += "</ul>";
+      }
+
+      // 显示建议标签
+      if (data.suggested_tags && data.suggested_tags.length > 0) {
+        enhancedHtml += "<h4>🏷️ 建议标签:</h4><p>";
+        data.suggested_tags.forEach(tag => {
+          enhancedHtml += `<span style="background:#e3f2fd;padding:2px 6px;margin:2px;border-radius:3px;">${tag}</span> `;
+        });
+        enhancedHtml += "</p>";
+      }
+
+      // 显示优先级
+      if (data.priority_level) {
+        const priorityColors = {high: "#f44336", medium: "#ff9800", low: "#4caf50"};
+        const color = priorityColors[data.priority_level] || "#666";
+        enhancedHtml += `<h4>⚡ 优先级: <span style="color:${color}">${data.priority_level}</span></h4>`;
+      }
+
+      // 显示提醒建议
+      if (data.reminder_suggestions && data.reminder_suggestions.length > 0) {
+        enhancedHtml += "<h4>⏰ 提醒建议:</h4><ul>";
+        data.reminder_suggestions.forEach(reminder => {
+          enhancedHtml += `<li>${reminder}</li>`;
+        });
+        enhancedHtml += "</ul>";
+      }
+
+      // 显示事件分析（如果有）
+      if (data.event_analysis) {
+        enhancedHtml += "<h4>📊 事件分析:</h4><ul>";
+        const analysis = data.event_analysis;
+        if (analysis.speaker_count > 0) {
+          enhancedHtml += `<li>说话人数量: ${analysis.speaker_count}</li>`;
+        }
+        if (analysis.event_duration_sec > 0) {
+          enhancedHtml += `<li>事件时长: ${analysis.event_duration_sec.toFixed(1)} 秒</li>`;
+        }
+        if (analysis.contains_pii) {
+          enhancedHtml += `<li>⚠️ 包含个人敏感信息</li>`;
+        }
+        enhancedHtml += "</ul>";
+      }
+
+      // 显示音频质量（如果有）
+      if (data.audio_quality_assessment) {
+        const quality = data.audio_quality_assessment;
+        const qualityColors = {good: "#4caf50", fair: "#ff9800", poor: "#f44336"};
+        const color = qualityColors[quality.overall_quality] || "#666";
+        enhancedHtml += `<h4>🎵 音频质量: <span style="color:${color}">${quality.overall_quality}</span></h4>`;
+        if (quality.asr_confidence) {
+          enhancedHtml += `<p>ASR置信度: ${(quality.asr_confidence * 100).toFixed(1)}%</p>`;
+        }
+      }
+
+      // 如果有增强信息，显示在页面上
+      if (enhancedHtml) {
+        let enhancedDiv = document.getElementById("enhanced-info");
+        if (!enhancedDiv) {
+          enhancedDiv = document.createElement("div");
+          enhancedDiv.id = "enhanced-info";
+          enhancedDiv.style.marginTop = "20px";
+          enhancedDiv.style.padding = "15px";
+          enhancedDiv.style.backgroundColor = "#f8f9fa";
+          enhancedDiv.style.borderRadius = "8px";
+          enhancedDiv.style.border = "1px solid #dee2e6";
+          document.querySelector(".container").appendChild(enhancedDiv);
+        }
+        enhancedDiv.innerHTML = "<h3>🔍 增强分析结果</h3>" + enhancedHtml;
+      }
+    }
+  </script>
+</body>
+</html>

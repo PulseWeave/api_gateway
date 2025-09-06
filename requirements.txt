@@ -1,0 +1,13 @@
+# 核心依赖 - 基本推理功能
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0
+tenacity>=8.2.2
+python-dotenv>=1.0.1
+pydantic>=2.7.0
+anyio>=4.4.0
+PyYAML>=6.0
+
+# WebSocket和异步通信
+websockets>=12.0
+asyncio-mqtt>=0.16.1
