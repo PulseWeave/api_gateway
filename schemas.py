@@ -123,5 +123,36 @@ class InferResponse(BaseModel):
     audio_quality_assessment: Optional[Dict[str, Any]] = Field(default=None, description="音频质量评估")
 
 
+# ASR队列相关数据模型
+class ASRResult(BaseModel):
+    filename: str = Field(..., description="ASR结果文件名")
+    content: str = Field(..., description="转写内容")
+    reason: str = Field(default="unknown", description="输出原因")
+    force: bool = Field(default=False, description="是否强制输出")
+    stream_id: str = Field(default="", description="流ID")
+
+
+class ASRProcessedResult(BaseModel):
+    timestamp: str = Field(..., description="处理时间戳")
+    asr_result: ASRResult = Field(..., description="原始ASR结果")
+    inference_result: Optional[Dict[str, Any]] = Field(default=None, description="推理分析结果")
+    event_data: Optional[Dict[str, Any]] = Field(default=None, description="构建的事件数据")
+    content: str = Field(..., description="转写内容")
+
+
+class ASRQueueStats(BaseModel):
+    is_running: bool = Field(..., description="是否正在运行")
+    queue_dir: str = Field(..., description="队列目录")
+    total_processed: int = Field(..., description="已处理总数")
+    has_sdk: bool = Field(..., description="是否有SDK支持")
+    callbacks_count: int = Field(..., description="回调函数数量")
+
+
+class ASRQueueResponse(BaseModel):
+    message: str = Field(..., description="响应消息")
+    success: bool = Field(..., description="操作是否成功")
+    data: Optional[Dict[str, Any]] = Field(default=None, description="响应数据")
+
+
 class HealthResponse(BaseModel):
     status: str = "ok"

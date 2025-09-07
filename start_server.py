@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 PulseWeave API Gateway 启动脚本
 提供便捷的服务启动和配置选项
@@ -9,7 +10,14 @@ import sys
 import argparse
 import subprocess
 import yaml
+import signal
 from pathlib import Path
+
+# 设置输出编码
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
 
 def check_dependencies():
@@ -127,11 +135,21 @@ def start_server(host: str, port: int, reload: bool, workers: int, log_level: st
     print(f"🎨 演示界面: http://{host}:{port}/ui/")
     print(f"🔧 高级界面: http://{host}:{port}/ui/advanced_demo.html")
     print("-" * 60)
+    print("💡 按 Ctrl+C 停止服务器")
     
     try:
-        subprocess.run(cmd, check=True)
+        # 使用Popen以便更好地处理信号
+        process = subprocess.Popen(cmd)
+        process.wait()
     except KeyboardInterrupt:
-        print("\n👋 服务器已停止")
+        print("\n⏹️ 正在停止服务器...")
+        try:
+            process.terminate()
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print("⚠️ 强制终止服务器...")
+            process.kill()
+        print("👋 服务器已停止")
     except subprocess.CalledProcessError as e:
         print(f"❌ 服务器启动失败: {e}")
         sys.exit(1)

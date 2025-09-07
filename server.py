@@ -2,7 +2,7 @@ import os
 import time
 import json
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import yaml
 from fastapi import FastAPI, Depends, HTTPException, Header, WebSocket, WebSocketDisconnect
@@ -13,16 +13,18 @@ from fastapi.responses import RedirectResponse
 
 try:
     # 尝试相对导入（作为包运行时）
-    from .schemas import InferRequest, InferResponse, HealthResponse
+    from .schemas import InferRequest, InferResponse, HealthResponse, ASRQueueStats, ASRQueueResponse, ASRProcessedResult
     from .providers import get_provider
     from .websocket_manager import websocket_manager, handle_websocket_message
     from .task_processor import start_task_processor, stop_task_processor
+    from .asr_queue_manager import initialize_asr_queue_manager, get_asr_queue_manager
 except ImportError:
     # 绝对导入（直接运行时）
-    from schemas import InferRequest, InferResponse, HealthResponse
+    from schemas import InferRequest, InferResponse, HealthResponse, ASRQueueStats, ASRQueueResponse, ASRProcessedResult
     from providers import get_provider
     from websocket_manager import websocket_manager, handle_websocket_message
     from task_processor import start_task_processor, stop_task_processor
+    from asr_queue_manager import initialize_asr_queue_manager, get_asr_queue_manager
 
 load_dotenv()
 
@@ -32,14 +34,28 @@ app = FastAPI(title="PulseWeave API Gateway", version="0.1.0")
 @app.on_event("startup")
 async def startup_event():
     """应用启动时的初始化"""
-    # 启动任务处理器
-    await start_task_processor(PROVIDER, max_workers=3)
+    try:
+        # 启动任务处理器
+        await start_task_processor(PROVIDER, max_workers=3)
+        
+        # 初始化ASR队列管理器（不阻塞启动）
+        queue_dir = CONFIG.get("asr", {}).get("queue_dir", "outputs")
+        await initialize_asr_queue_manager(queue_dir, PROVIDER, CONFIG)
+        print("✅ API Gateway 启动完成")
+    except Exception as e:
+        print(f"⚠️ 启动时出现警告: {e}")
+        # 不阻塞启动，继续运行基本功能
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭时的清理"""
     # 停止任务处理器
     await stop_task_processor()
+    
+    # 停止ASR队列管理器
+    asr_manager = get_asr_queue_manager()
+    if asr_manager:
+        await asr_manager.stop_listening()
 
 # CORS（前端本地页面或内置UI使用）
 app.add_middleware(
@@ -291,6 +307,95 @@ async def _enhance_with_event_analysis(result: Dict[str, Any], event_data: Dict[
     })
 
     return result
+
+
+# ASR队列相关接口
+@app.post("/asr/start", response_model=ASRQueueResponse)
+async def start_asr_queue(_: None = Depends(check_auth)) -> ASRQueueResponse:
+    """启动ASR队列监听"""
+    try:
+        asr_manager = get_asr_queue_manager()
+        if not asr_manager:
+            return ASRQueueResponse(
+                message="ASR队列管理器未初始化",
+                success=False
+            )
+        
+        if asr_manager.is_running:
+            return ASRQueueResponse(
+                message="ASR队列监听已在运行中",
+                success=True,
+                data=asr_manager.get_stats()
+            )
+        
+        # 启动监听
+        await asr_manager.start_listening()
+        
+        return ASRQueueResponse(
+            message="ASR队列监听已启动",
+            success=True,
+            data=asr_manager.get_stats()
+        )
+        
+    except Exception as e:
+        return ASRQueueResponse(
+            message=f"启动ASR队列监听失败: {str(e)}",
+            success=False
+        )
+
+
+@app.post("/asr/stop", response_model=ASRQueueResponse)
+async def stop_asr_queue(_: None = Depends(check_auth)) -> ASRQueueResponse:
+    """停止ASR队列监听"""
+    try:
+        asr_manager = get_asr_queue_manager()
+        if not asr_manager:
+            return ASRQueueResponse(
+                message="ASR队列管理器未初始化",
+                success=False
+            )
+        
+        await asr_manager.stop_listening()
+        
+        return ASRQueueResponse(
+            message="ASR队列监听已停止",
+            success=True,
+            data=asr_manager.get_stats()
+        )
+        
+    except Exception as e:
+        return ASRQueueResponse(
+            message=f"停止ASR队列监听失败: {str(e)}",
+            success=False
+        )
+
+
+@app.get("/asr/stats", response_model=ASRQueueStats)
+async def get_asr_queue_stats() -> ASRQueueStats:
+    """获取ASR队列统计信息"""
+    asr_manager = get_asr_queue_manager()
+    if not asr_manager:
+        return ASRQueueStats(
+            is_running=False,
+            queue_dir="",
+            total_processed=0,
+            has_sdk=False,
+            callbacks_count=0
+        )
+    
+    stats = asr_manager.get_stats()
+    return ASRQueueStats(**stats)
+
+
+@app.get("/asr/results", response_model=List[ASRProcessedResult])
+async def get_asr_results(limit: int = 10) -> List[ASRProcessedResult]:
+    """获取最近的ASR处理结果"""
+    asr_manager = get_asr_queue_manager()
+    if not asr_manager:
+        return []
+    
+    results = asr_manager.get_recent_results(limit)
+    return [ASRProcessedResult(**result) for result in results]
 
 
 # 简化版本 - 只保留基本推理功能

@@ -13,3 +13,20 @@ provider:
 service:  
   require_auth: false  
   return_vector: false 
+
+# ASR队列配置
+asr:
+  # ASR转写结果队列目录 - 必须与同事的输出目录一致
+  queue_dir: "outputs"
+  
+  # 服务器部署时的绝对路径配置（可选）
+  # queue_dir: "/path/to/shared/outputs"
+  
+  # 监听间隔（秒）
+  monitor_interval: 1.0
+  
+  # 历史记录保存数量
+  max_history: 100
+  
+  # 是否自动启动队列监听
+  auto_start: true
