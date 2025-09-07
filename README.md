@@ -30,9 +30,6 @@ cd api_gateway
 # 使用启动脚本安装依赖
 python start_server.py --install-deps
 
-# 复制配置文件
-cp config.example.yaml config.yaml
-
 # 编辑配置文件，设置API密钥等信息
 # 或设置环境变量: export DEEPSEEK_API_KEY=your-key
 ```
